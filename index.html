@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Secure Online Election</title>
+<style>
+body{font-family:sans-serif;margin:40px;background:#f4f7f6;color:#333}
+section{background:white;padding:25px;margin-bottom:25px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1)}
+h1{text-align:center;color:#2c3e50}
+label{display:block;font-weight:bold;margin:5px 0}
+select,input,button{width:100%;padding:12px;margin-bottom:15px;border-radius:4px;border:1px solid #ddd;font-size:16px}
+button{background:#3498db;color:white;border:none;cursor:pointer;transition:.3s}
+button:hover{background:#2980b9}
+button:disabled{background:#ccc}
+#msg{text-align:center;font-weight:bold;color:#e67e22}
+ul{list-style:none;padding:0}
+li{background:#eee;padding:10px;margin:5px 0;border-left:5px solid #3498db}
+</style>
+</head>
+<body>
+<h1>Secure Online Election</h1>
+<section>
+<h2>Cast Your Vote</h2>
+<label>Enter Your Voting Token</label>
+<input type="text" id="token" placeholder="Enter your unique token">
+<label>Select Candidate</label>
+<select id="candidate"><option>Loading...</option></select>
+<button id="submitBtn" onclick="submitVote()">Submit Vote</button>
+<p id="msg"></p>
+</section>
+
+<section>
+<h2>Live Results</h2>
+<button onclick="loadResults()">Refresh Results</button>
+<ul id="results"></ul>
+</section>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbybwcutSRVhHwyBWC-Rh0FkP9bDQtP3CLs0z1uEGVsGD4Ra_Oj1Q52GrO_DwtI2FowoUA/exec"; // Replace with your GAS Web App URL
+
+async function loadCandidates(){
+  try {
+    let res = await fetch(API+"?action=getCandidates");
+    let data = await res.json();
+    let select = document.getElementById("candidate");
+    select.innerHTML = "";
+    for(let i=1;i<data.length;i++){
+      let option = document.createElement("option");
+      option.value=data[i][0];
+      option.text=data[i][1];
+      select.appendChild(option);
+    }
+  } catch(e){console.error("Error loading candidates", e);}
+}
+
+async function submitVote(){
+  const btn=document.getElementById("submitBtn");
+  const msg=document.getElementById("msg");
+  const token=document.getElementById("token").value;
+  const candidate=document.getElementById("candidate").value;
+  if(!token){alert("Enter your token"); return;}
+  btn.disabled=true; msg.innerText="Processing vote...";
+  try {
+    let res=await fetch(API,{
+      method:"POST",
+      body:JSON.stringify({action:"vote",token:token,candidateId:candidate})
+    });
+    let text=await res.text();
+    msg.innerText=text;
+    loadResults();
+  } catch(e){msg.innerText="Error submitting vote"; console.error(e);}
+  finally{btn.disabled=false;}
+}
+
+async function loadResults(){
+  try {
+    let res=await fetch(API+"?action=results");
+    let data=await res.json();
+    let ul=document.getElementById("results"); ul.innerHTML="";
+    for(let c in data){
+      let li=document.createElement("li"); li.innerText=c+" : "+data[c]+" votes"; ul.appendChild(li);
+    }
+  } catch(e){console.error("Error loading results", e);}
+}
+
+loadCandidates();
+loadResults();
+</script>
+</body>
+</html>
